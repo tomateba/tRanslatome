@@ -4,13 +4,13 @@
 \title{computeDEGsHelpfile}
 \description{
 This function takes as input an object of the class \code{\linkS4class{TranslatomeDataset}} which contains a normalized data matrix coming from high throughput experiment. 
-It takes as an input a character label specifying the method that we want to employ in order to detect DEGs(t-test, ANOTA, DESeq, edgeR, SAM, RP, limma) and returns an object of the class \code{\linkS4class{DEGs}}, in which each gene is assigned an expression class: up- or down-regulated at the first level, up- or down-regulated at the second level, up-regulated at both levels, down-regulated at both levels, up-regulated at the first level and down-regulated at the second level and vice versa.
+It takes as an input a character label specifying the method that we want to employ in order to detect DEGs(t-test, translational efficiency, ANOTA, DESeq, edgeR, SAM, RP, limma) and returns an object of the class \code{\linkS4class{DEGs}}, in which each gene is assigned an expression class: up- or down-regulated at the first level, up- or down-regulated at the second level, up-regulated at both levels, down-regulated at both levels, up-regulated at the first level and down-regulated at the second level and vice versa.
 }
 \usage{computeDEGs(object, method="limma", significance.threshold= 0.05,
     FC.threshold= 0, log.transformed = FALSE, mult.cor=TRUE)}
 \arguments{
  \item{object}{an object of class \code{\linkS4class{TranslatomeDataset}}}
- \item{method}{a character string that specifies the method that the user wants to employ in the differential expression analysis. It can have one the following values: \code{limma}, \code{t-test}, \code{RP}, \code{SAM}, \code{ANOTA}, \code{DESeq} and \code{none}.By default, this value is set to \code{limma},}
+ \item{method}{a character string that specifies the method that the user wants to employ in the differential expression analysis. It can have one the following values: \code{limma}, \code{t-test}, \code{RP}, \code{TE}, \code{SAM}, \code{ANOTA}, \code{DESeq} and \code{none}.By default, this value is set to \code{limma},}
  \item{significance.threshold}{a numeric value specifying the threshold on the statistical significance below which the genes are considered as differentially expressed, the default is set to \code{0.05},}
  \item{FC.threshold}{a numeric value specifying the threshold on the absolute log2 fold change, above which the genes are considered as differentially expressed, the default is set to \code{0},}
   \item{log.transformed}{a boolean variable specifying whether the signals contained in expr.matrix have been previously log2 transformed. By default it is set to \code{FALSE},}
@@ -29,6 +29,9 @@ Biol., 3:Article3.
 Tian L, Greenberg SA, Kong SW, Altschuler J, Kohane IS, Park PJ.(2005)
 Discovering statistically significant pathways in expression profiing
 studies. Proc Natl Acad Sci USA, 102(38):13544-9.
+
+Courtes FC et al. (2013) Translatome analysis of CHO cells identify
+key growth genes. Journal of Biotechnology, 167, 215-24.
 
 Breitling R, Armengaud P, Amtmann A, Herzyk P.(2004) Rank products: a
 simple, yet powerful, new method to detect differentially regulated

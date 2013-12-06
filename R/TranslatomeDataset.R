@@ -101,7 +101,7 @@ setMethod("computeDEGs", "TranslatomeDataset",
 			to calculate DEGs with statistical methods!')
 		
 		if (!(method %in% 
-					c("limma", "SAM", "t-test", "RP", "ANOTA", "DESeq", "edgeR", "none"))) 
+					c("limma", "SAM", "t-test", "TE", "RP", "ANOTA", "DESeq", "edgeR", "none"))) 
 			stop('This method is not recognized!')
 		
 		# conditions for the two levels (first is 1,2 and second is 3,4)
@@ -115,14 +115,25 @@ setMethod("computeDEGs", "TranslatomeDataset",
 			cond2 <- log(cond2, base=2)  
 			cond3 <- log(cond3, base=2)
 			cond4 <- log(cond4, base=2)
-		}
-		
+		}	
+	
 		cond <- cbind(cond1, cond2)
 		cond.vector <- c(rep(0, ncol(cond1)), rep(1, ncol(cond2)))
 
 		cond.2 <- cbind(cond3,cond4)
 		cond.2.vector <- c(rep(0, ncol(cond3)), rep(1, ncol(cond4)))
+		
+		# if the chosen method is translational efficiency, put together samples
+		# as first & second level case and first & second level control
+		# meaning: Pol Case vs Sub/Tot Case and Pol Ctrl vs Sub/Tot Ctrl
+		if (method == "TE") {
+			cond <- cbind(cond1, cond3)
+			cond.vector <- c(rep(0, ncol(cond1)), rep(1, ncol(cond3)))
 
+			cond.2 <- cbind(cond2,cond4)
+			cond.2.vector <- c(rep(0, ncol(cond2)), rep(1, ncol(cond4)))
+		}
+		
 		#Calculation of FC, avg, and sd for the first level
 		FC <- apply(cond, 1,
 					function(x) mean(x[which(cond.vector == 1)], na.rm=TRUE) - 
@@ -165,6 +176,11 @@ setMethod("computeDEGs", "TranslatomeDataset",
 			sig.matrix <- methodRP(cond, cond.2, cond.vector, cond.2.vector, mult.cor)
 		if (method == "t-test") 
 			sig.matrix <- methodTTest(cond, cond.2, cond.vector, cond.2.vector)
+		if (method == "TE")
+			# compute translational efficiency p-values with Limma as if it was
+			# the normal condition, but cond and cond.2 have been built in a
+			# different way (tot/sub + pol ctrl) and (tot/sub + pol case)
+			sig.matrix <- methodLimma(cond, cond.2, cond.vector, cond.2.vector)
 		if (method == "SAM") 
 			sig.matrix <- methodSAM(cond, cond.2, cond.vector, cond.2.vector)
 		if (method == "limma") 
@@ -318,6 +334,7 @@ methodTTest <- function(cond, cond.2, cond.vector, cond.2.vector) {
 	return(cbind(t.test.pval, t.test.pval.adj, 
 							 t.test.pval2, t.test.pval.adj2))	
 }
+
 
 # Implementation of the SAM helper function
 methodSAM <- function(cond, cond.2, cond.vector, cond.2.vector) {

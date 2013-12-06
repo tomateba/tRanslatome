@@ -59,7 +59,7 @@ setGeneric("GOEnrichment", signature="object",
 		
 setGeneric("RegulatoryEnrichment", signature="object", 
 					function(object, classOfDEGs="both", 
-									 significance.threshold = 0.05, mult.cor=TRUE)
+									 significance.threshold = 0.05, mult.cor=TRUE, regulated.identities=NULL, regulated.counts=NULL)
 					standardGeneric("RegulatoryEnrichment"))
 
 
@@ -589,7 +589,7 @@ setMethod("GOEnrichment", "DEGs",
 ## Implementation of the RegulatoryEnrichment method
 setMethod("RegulatoryEnrichment", "DEGs", 
           function(object, classOfDEGs="both", 
-									 significance.threshold= 0.05, mult.cor=TRUE) {
+									 significance.threshold= 0.05, mult.cor=TRUE, regulated.identities=NULL, regulated.counts=NULL) {
   
 	resultMatrix <- DEGs.table(object)
 	label.fc <- grep(c("FC"), colnames(resultMatrix), value=TRUE)
@@ -624,9 +624,9 @@ setMethod("RegulatoryEnrichment", "DEGs",
 	}
 	else {
 		enriched.1 <- computeGeneListEnrichment(genes.1stlevel,
-											label.level.DEGs[1], significance.threshold, mult.cor)
+											label.level.DEGs[1], significance.threshold, mult.cor, regulated.identities=NULL, regulated.counts=NULL)
 		enriched.2 <- computeGeneListEnrichment(genes.2ndlevel,
-											label.level.DEGs[2], significance.threshold, mult.cor)
+											label.level.DEGs[2], significance.threshold, mult.cor, regulated.identities=NULL, regulated.counts=NULL)
 		
 		return(new("EnrichedSets", enriched.table=rbind(enriched.1, enriched.2), 
 												 label.level.enriched=label.level.DEGs))	
@@ -706,15 +706,24 @@ createspecifictable <- function(background,myInterestedGenes,ontology,
 
 
 computeGeneListEnrichment <- 
-		function(DEGs.genes, level.label, significance.threshold, mult.cor) {
+		function(DEGs.genes, level.label, significance.threshold, mult.cor, regulated.identities=NULL, regulated.counts=NULL) {
 	
-	# explicitly define the two tables (contained in tRanslatomeDataset)
-	# to avoid Rcmd check complaining as it does not see these	
-	regulatory.elements.regulated <- NULL
-	regulatory.elements.counts <- NULL
-	
-	# we need data contained in our tRanslatome dataset, so load it
-	data(tRanslatomeSampleData, envir=environment())
+		# explicitly define the two tables (contained in tRanslatomeDataset)
+		# to avoid Rcmd check complaining as it does not see these	
+		regulatory.elements.regulated <- NULL
+		regulatory.elements.counts <- NULL
+		
+		# if the user specified custom regulator-target identities and regulated
+		# counts matrices, use these
+		if (!is.null(regulated.identities) && !is.null(regulated.counts)){
+			regulatory.elements.regulated <- regulated.identities
+			regulatory.elements.counts <- regulated.counts
+		}
+		else {
+			# we need our default regulatory element data contained 
+			# in tRanslatome dataset, so load it
+			data(tRanslatomeSampleData, envir=environment())
+		}
 	
 		enrichments <- c()
 		
@@ -762,5 +771,6 @@ computeGeneListEnrichment <-
 												 "pv.fisher.BH"=p.adjust(enrichments[,5], 
 												 method="BH",n=nrow(regulatory.elements.counts)))
 												
-	return(as.data.frame(enrichments[order(as.numeric(enrichments[,5])),],stringsAsFactors=F))
+	return(as.data.frame(enrichments[order(as.numeric(enrichments[,5])),],
+											stringsAsFactors=F))
 }

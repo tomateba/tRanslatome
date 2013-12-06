@@ -9,6 +9,7 @@
 \usepackage{isorot}
 \usepackage{epsfig}
 \usepackage{fullpage} % standard 1 inch margins
+\usepackage[utf8]{inputenc}
 
 \newcommand{\Robject}[1]{{\texttt{#1}}}
 \newcommand{\Rfunction}[1]{{\texttt{#1}}}
@@ -21,18 +22,18 @@
 
 \usepackage{Sweave}
 \begin{document}
-\title{tRanslatome: portrayal of translational controls hidden in high-throughput assays}
+\title{tRanslatome: an R/Bioconductor package to portray translational control}
 \author{
   Toma Tebaldi
-  \email{<tebaldi@science.unitn.it>},\\
+  \email{<t.tebaldi@unitn.it>},\\
   Erik Dassi
   \email{<erik.dassi@unitn.it>},\\
   Galena Kostoska
-  \email{<galena.kostoska@gmail.com>},\\
+  \email{<kostoska.galena@unitn.it>},\\
     Gabriella Viero 
-  \email{<viero@science.unitn.it>},\\
+  \email{<viero@fbk.eu>},\\
    Alessandro Quattrone
-  \email{<viero@science.unitn.it>},\\
+  \email{<alessandro.quattrone@unitn.it>},\\
 }
 
 \maketitle
@@ -40,7 +41,7 @@
 
 
 \section{Introduction}
-One way to achieve a comprehensive estimation of the influence of different layers of control on gene expression is to analyze the changes in abundances of gene expression intermediates at different levels. For example, comparing changes between abundances of mRNAs in active translation with respect to the corresponding changes in abundances of total mRNAs (by mean of parallel high-throughput profiling), we can estimate the influence of translational controls on each transcript. tRanslatome represents a complete platform for comparing data coming from two parallel high-throughput assays, profiling two different levels of gene expression (e.g. transcriptome, translatome, proteome). It provides a broad variety of statistical methods covering each step of the standard data analysis workflow: detection and comparison between levels of differentially expressed genes (DEGs), detection and comparison between levels of enriched biological themes through Gene Ontology (GO) annotation, and indirect detection of post-transcriptional regulators influencing the translational efficience of target mRNAs. The package provides tools to visually compare/contrast the resulting DEGs using scatterplots, histograms and MA plots. An additional feature lies in the possibility to detect differently enriched biological themes, provided as lists of GO terms, in the lists of DEGs identified by the gene detection method. In this way a comparison between the biological themes detected among different levels is possible: tRanslatome splits GO terms enriched exclusively in one of the two levels, calculating also the semantic similarity  between the two lists of GO terms. The differential enrichment of GO terms can be visually examined with heatmaps and radar plots. Finally, enrichment analysis of RNA binding protein binding sites, miRNA binding sites or other RNA regulatory motifs (e.g. AU rich elements) can be performed on the lists of differentially expressed genes, in order to know if some specific trans-factor is responsible for their changes in translation.
+One way to achieve a comprehensive estimation of the influence of different layers of  control on gene expression is to analyze the changes in abundances of molecular intermediates at different levels. For example, comparing changes between abundances of mRNAs in active translation with respect to the corresponding changes in abundances of total mRNAs (by mean of parallel high-throughput profiling) we can estimate the influence of translational controls on each transcript. The tRanslatome package represents a complete platform for comparing data coming from two parallel high-throughput assays, profiling two different levels of gene expression. The package focusses on the comparison between the translatome and the transcriptome, but it can be used to compare any variation monitored at two “-omics” levels (e.g. the transcriptome and the proteome). The package provides a broad variety of statistical methods covering each step of the standard data analysis workflow: detection and comparison of differentially expressed genes (DEGs), detection and comparison of enriched biological themes through Gene Ontology (GO) annotation. The package provides tools to visually compare/contrast the results. An additional feature lies in the possibility to detect enrichment of targets of translational regulators using the experimental annotation contained in the AURA database \url{<http://aura.science.unitn.it/>}.
 
 \section{tRanslatome in practice}
 The following code illustrates an analysis pipeline with tRanslatome.
@@ -75,8 +76,10 @@ All the steps contained in the code will be explained in more detail in the foll
 @ 
 
 \section{DEGs detection}
-The core of the package consists of the class holding input data and results, called \code{TranslatomeDataset}.
-Objects of this class can be created through the \code{newTranslatomeDataset} function. This function takes as input a normalized data matrix coming from the high throughput experiment with entities (genes) in rows and samples (microarray hybridizations) in columns. Since tRanslatome doesn't provide any normalization, signals contained in the data matrix should be normalized before (if appropriate). In our example (see Section 2) data were previously quantile normalized.
+The initial core of the package consists of the class holding input data and results, called \code{TranslatomeDataset}.
+Objects of this class can be created through the \code{newTranslatomeDataset} function. This function takes as input a normalized data matrix coming from the high throughput experiment with entities (genes, transcripts, exons) in rows and samples (normalized signals coming from microarray, next generation sequencing, mass spectrometry) in columns. Since tRanslatome doesn't provide any normalization, signals contained in the data matrix should be normalized before, unless the DEGs selection method doesn’t provide also a normalization step, as in the case of edgeR and DEseq. 
+In our worked example microarray data were previously quantile normalized.
+
 The function has the following input parameters:
 \begin{itemize}
 \item expr.matrix, a matrix that contains the normalized signal intensity data, each row representing a gene and each column representing a sample;
@@ -103,7 +106,7 @@ The function has the following input parameters:
 \begin{itemize}
 \item object, an object of class \code{TranslatomeDataset} containing the data needed for DEGs identification;
 \item   method, a label that specifies the statistical method for DEGs detection. 
-It can have one the following values: \code{limma} \cite{Limma}, \code{t-test} \cite{t-test}, \code{RP} \cite{RP}, \code{SAM} \cite{SAM}, \code{ANOTA} \cite{ANOTA}, \code{DESeq} \cite{DESeq}, \code{edgeR} \cite{edgeR} and \code{none};
+It can have one the following values: \code{limma} \cite{Limma}, \code{t-test} \cite{t-test}, \code{RP} \cite{RP}, \code{TE} \cite{TE}, \code{SAM} \cite{SAM}, \code{ANOTA} \cite{ANOTA}, \code{DESeq} \cite{DESeq}, \code{edgeR} \cite{edgeR} and \code{none};
 \item  significance.threshold, a threshold on the statistical significance below which the genes are
 considered as differentially expressed, the default is set to 0.05;
 \item   FC.threshold, additional threshold on the absolute log2 fold change, above which the genes are
@@ -287,7 +290,7 @@ The method \code{SimilarityPlot()}, applied to an object of class \code{GOsims},
 
 \section{Regulatory Enrichment}
 
-RegulatoryEnrichment is a function which, given as input an object of class \code{DEGs}, identifies overrepresented post-transcriptional regulators (RNA-binding proteins, microRNA, etc) possibly controlling differentially expressed genes. The analysis is applied to a dataset of experimentally determined post-transcriptional interactions extracted from the AURA database(http://aura.science.unitn.it). Moreover, the function can identify enriched regulators for separate classes of genes of interest: only up-regulated genes, only down-regulated genes or both of them together. The output of the function is an object of class \code{EnrichedSets}, containing the results of the enrichment analysis. 
+RegulatoryEnrichment is a function which, given as input an object of class \code{DEGs}, identifies overrepresented post-transcriptional regulators (RNA-binding proteins, microRNA, etc) possibly controlling differentially expressed genes. The analysis is applied to a dataset of experimentally determined post-transcriptional interactions extracted from the AURA database(http://aura.science.unitn.it). However, the user can specify a custom dataset onto which the analysis can be performed (see arguments for details). Moreover, the function can identify enriched regulators for separate classes of genes of interest: only up-regulated genes, only down-regulated genes or both of them together. Moreover, the function can identify enriched regulators for separate classes of genes of interest: only up-regulated genes, only down-regulated genes or both of them together. The method works by exploiting two lists: one containing all genes regulated by each of the post-transcriptional regulators, and the other containing the number of regulated and non-regulated genes for each of these post-transcriptional regulators in the backgroung gene set (usually the whole genome). By means of these two lists it is possible to compute a Fisher enrichment p-value indicating wether a significant group of genes in the DEGs list is likely to be regulated by one or more of these post-transcriptional regulators. The output of the function is an object of class \code{EnrichedSets}, containing the results of the enrichment analysis. 
 
 The method \code{Radar()} and the method \code{Heatmap()} can be applied also to objects of class \code{EnrichedSets} in order to display the top enriched regulatory elements for the first and second expression level in a radar plot or in a heatmap display.
 
@@ -314,7 +317,12 @@ The method \code{Radar()} and the method \code{Heatmap()} can be applied also to
   Breitling R, Armengaud P, Amtmann A, Herzyk P.
   Rank products: a simple, yet powerful, new method to detect differentially regulated genes in replicated microarray experiments
   {\em FEBS Lett.}, 2004, 573(1-3):83-92.
-   
+  
+\bibitem{TE}  
+  Courtes FC et al. (2013) 
+  Translatome analysis of CHO cells identify key growth genes. 
+  {\em Journal of Biotechnology}, 167, 215-24.
+
 \bibitem{SAM}
   Tusher VG, Tibshirani R, Chu G.
   Significance analysis of microarrays applied to the ionizing radiation response
