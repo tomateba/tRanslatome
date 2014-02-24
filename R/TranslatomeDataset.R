@@ -156,7 +156,7 @@ setMethod("computeDEGs", "TranslatomeDataset",
 						function(x) mean(x[which(cond.2.vector == 1)],na.rm=TRUE) - 
 												mean(x[which(cond.2.vector == 0)],na.rm=TRUE))
 		if (object@data.type  ==  "ngs") 
-      FC <- apply(cond.2, 1,
+      FC2 <- apply(cond.2, 1,
 						function(x) log(mean(x[which(cond.2.vector == 1)],na.rm=TRUE) / 
 														mean(x[which(cond.2.vector == 0)],na.rm=TRUE),base=2))
     avg.trt2 <- apply(cond.2, 1,
