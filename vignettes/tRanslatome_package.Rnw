@@ -1,0 +1,374 @@
+%\VignetteIndexEntry{tRanslatome}
+%\VignetteKeywords{Translation, DEGs, GO, enrichment, comparison}
+%\VignettePackage{tRanslatome}
+
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{isorot}
+\usepackage{epsfig}
+\usepackage{fullpage} % standard 1 inch margins
+\usepackage[utf8]{inputenc}
+
+\newcommand{\Robject}[1]{{\texttt{#1}}}
+\newcommand{\Rfunction}[1]{{\texttt{#1}}}
+\newcommand{\Rpackage}[1]{{\textit{#1}}}
+\newcommand{\Rclass}[1]{{\textit{#1}}}
+\newcommand{\Rmethod}[1]{{\textit{#1}}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\email}[1]{\texttt{#1}}
+
+
+\usepackage{Sweave}
+\begin{document}
+\title{tRanslatome: an R/Bioconductor package to portray translational control}
+\author{
+  Toma Tebaldi
+  \email{<t.tebaldi@unitn.it>},\\
+  Erik Dassi
+  \email{<erik.dassi@unitn.it>},\\
+  Galena Kostoska
+  \email{<kostoska.galena@unitn.it>},\\
+    Gabriella Viero 
+  \email{<viero@fbk.eu>},\\
+   Alessandro Quattrone
+  \email{<alessandro.quattrone@unitn.it>},\\
+}
+
+\maketitle
+\tableofcontents
+
+
+\section{Introduction}
+One way to achieve a comprehensive estimation of the influence of different layers of  control on gene expression is to analyze the changes in abundances of molecular intermediates at different levels. For example, comparing changes between abundances of mRNAs in active translation with respect to the corresponding changes in abundances of total mRNAs (by mean of parallel high-throughput profiling) we can estimate the influence of translational controls on each transcript. The tRanslatome package represents a complete platform for comparing data coming from two parallel high-throughput assays, profiling two different levels of gene expression. The package focusses on the comparison between the translatome and the transcriptome, but it can be used to compare any variation monitored at two "-omics" levels (e.g. the transcriptome and the proteome). The package provides a broad variety of statistical methods covering each step of the standard data analysis workflow: detection and comparison of differentially expressed genes (DEGs), detection and comparison of enriched biological themes through Gene Ontology (GO) annotation. The package provides tools to visually compare/contrast the results. An additional feature lies in the possibility to detect enrichment of targets of translational regulators using the experimental annotation contained in the AURA database \url{<http://aura.science.unitn.it/>}.
+
+\section{tRanslatome in practice}
+The following code illustrates an analysis pipeline with tRanslatome.
+For demonstrating tRanslatome in practice we use a dataset coming from a study of Parent et al \cite{Parent}. 
+The dataset is named "tRanslatomeSampleData". 
+In this study, the authors profiled the total and the polysome-bound transcripts in differentiated and undifferentiated human HepaRG cells. 
+Therefore this example presents two levels of gene expression analysis (transcriptome, labelled as "tot" and translatome, labeled as "pol") on cells in two different conditions (undifferentiated, labeled as "undiff" vs. differentiated, labeled as "diff"). 
+Experiments were done by the authors in biological triplicate, labeled as "a","b" and "c".
+All the steps contained in the code will be explained in more detail in the following sections.
+
+<<echo=TRUE,eval=TRUE,results=hide>>=
+ ##loading the tRanslatome package
+ library(tRanslatome) 
+ ##loading the training data set
+ data(tRanslatomeSampleData) 
+ translatome.analysis <- newTranslatomeDataset(expressionMatrix, 
+			c("tot.undiff.a", "tot.undiff.b", "tot.undiff.c"), 
+			c("tot.diff.a", "tot.diff.b", "tot.diff.c"), 
+			c("pol.undiff.a", "pol.undiff.b", "pol.undiff.c"), 
+			c("pol.diff.a", "pol.diff.b", "pol.diff.c"), 
+			label.level= c("transcriptome", "translatome"), 
+			label.condition=c("undifferentiated", "differentiated"))
+ ##identification of DEGs with the use of the limma statistical method
+ limma.DEGs <- computeDEGs(translatome.analysis, 
+													 method= "limma", mult.cor=TRUE) 
+ ##enrichment analysis of the selected DEGs
+ CCEnrichment <- GOEnrichment(limma.DEGs,ontology="CC", classOfDEGs="up",
+															test.method="elim", test.threshold = 0.05)
+ ##performing a comparison of the biological themes enriched 
+ ##in the two levels of gene expression
+ CCComparison <- GOComparison(CCEnrichment) 
+@ 
+
+\section{DEGs detection}
+The initial core of the package consists of the class holding input data and results, called \code{TranslatomeDataset}.
+Objects of this class can be created through the \code{newTranslatomeDataset} function. This function takes as input a normalized data matrix coming from the high throughput experiment with entities (genes, transcripts, exons) in rows and samples (normalized signals coming from microarray, next generation sequencing, mass spectrometry) in columns. Since tRanslatome doesn't provide any normalization, signals contained in the data matrix should be normalized before, unless the DEGs selection method doesn't provide also a normalization step, as in the case of edgeR and DEseq. 
+In our worked example microarray data were previously quantile normalized.
+
+The function has the following input parameters:
+\begin{itemize}
+\item expr.matrix, a matrix that contains the normalized signal intensity data, each row representing a gene and each column representing a sample;
+\item  cond.a, a vector of column names belonging to expression matrix. These columns contain the signal intensity data coming
+from the samples of the first expression level of the control condition (in our example: total RNA, undifferentiated cells);
+\item cond.b, a vector of column names belonging to expression matrix. These columns contain the signal intensity data coming
+from the samples of the first expression level of the treatment condition (in our example: total RNA, differentiated cells);
+\item  cond.c, a vector of column names belonging to expression matrix. These columns contain the signal intensity data coming
+from the samples of the second expression level of the control condition (in our example: polysomal RNA, undifferentiated cells);
+\item  cond.d, a vector of column names belonging to expression matrix. These columns contain the signal intensity data coming
+from the samples of the second expression level of the treatment condition (in our example: polysomal RNA, differentiated cells);
+\item  label.level, character vector specifying the names given to the two levels. By
+default levels are named "1st level" and "2nd level", but the user can specify others: in our 
+example the two levels are named "transcriptome" and "translatome";
+\item  label.condition, character vector specifying the names given to the two conditions.
+ By default, these values are "control" and "treated", but user can specify others: in our 
+example the two levels are named "undifferentiated" and "differentiated";
+\item data.type, character vector specifying the type of data represented by \code{expr.matrix}. By default it is set to \code{array}, the other accepted value is \code{ngs};
+\end{itemize}
+ 
+Once the object is initialized one can call the function for the identification of DEGs, called \code{computeDEGs()}.
+\code{computeDEGs()} takes as input a label specifying the method that we want to employ in order to detect DEGs and returns a table containing for each gene the associated fold changes, statistical significances and classification according to their expression behaviour in the two levels.
+The function has the following input parameters:
+\begin{itemize}
+\item object, an object of class \code{TranslatomeDataset} containing the data needed for DEGs identification;
+\item   method, a label that specifies the statistical method for DEGs detection. 
+It can have one the following values: \code{limma} \cite{Limma}, \code{t-test} \cite{t-test}, \code{RP} \cite{RP}, \code{TE} \cite{TE}, \code{SAM} \cite{SAM}, \code{ANOTA} \cite{ANOTA}, \code{DESeq} \cite{DESeq}, \code{edgeR} \cite{edgeR} and \code{none};
+\item  significance.threshold, a threshold on the statistical significance below which the genes are
+considered as differentially expressed, the default is set to 0.05;
+\item   FC.threshold, additional threshold on the absolute log2 fold change, above which the genes are
+considered as differentially expressed, the default is set to 0;
+\item  log.transformed, a boolean variable specifying whether the data have been previously log2 transformed. By
+default it is set to FALSE;
+\item mult.cor, a boolean variable specifying whether the significance threshold is applied on the multiple test corrected or on the original p-values obtained from the DEGs detection method.  
+By  default it is set to TRUE.
+\end{itemize}
+ 
+The function \code{computeDEGs()} generates an object of class \code{DEGs}, containing the result of the differential expression analysis at the two expression levels. This object is returned and also stored in the DEGs slot of the \code{TranslatomeDataset} object. DEGs can then be later retrieved with the accessor \code{getDEGs} function.
+ 
+One way to visualize the results obtained by the \code{computeDEGs()} function is to use the \code{Scatterplot()}
+method on the object of class \code{DEGs} generated by the \code{computeDEGs()} function, generating a plot in logarithmic scale where each gene is a dot whose position is uniquely determined by its fold change (FC) at the first expression level, represented on the x-axis, and the FC at the second expression level, represented on the y-axis.
+
+Optional input parameters of the \code{Scatterplot()} method are:
+\begin{itemize}
+\item  outputformat, a character string specifying if the plot is saved in jpeg (\code{jpeg}), postscript (\code{postscript}), pdf (\code{pdf}) format, or it is simply displayed on the screen(\code{on screen}). By default this value is \code{on screen}.
+\item  track, a character vector of gene names that will be explicitly highlighted in the scatterplot, if they match any gene contained in the object of class \code{DEGs}. By default this vector is empty.
+\end{itemize}
+
+Figure \ref{Scatterplot} shows the graphical output of this method applied to the example object of class \code{DEGs}, where the two expression levels are names "transcriptome" and "translatome". We adopt a color code to label different classes of DEGs: blue for genes differentially expressed only at the first level, yellow for genes differentially expressed only at the second level, green for genes changing homodirectionally at both levels, red for the genes changing antidirectionally at the two levels.
+The Spearman's Correlation Coefficient between the fold changes of all the genes and between the fold changes of all the DEGs is also displayed.  
+
+\begin{figure}[tbp]
+  \includegraphics[]{fig//Scatterplot.png}
+  \caption{tRanslatome provides the method \code{Scatterplot()}, drawing a scatterplot in which each gene is mapped according to its fold change at the first level (represented on the x-axis) and the fold change at the second level (y-axis). The track parameter was set to \code{c("GAB1","FMR1","EGR1")}. We adopt a color code to label different classes of DEGs: blue for genes differentially expressed only at the first level; yellow for genes differentially expressed only at the second level, green for genes changing homodirectionally at both levels, red for the genes changing antidirectionally at the two levels.}
+  \label{Scatterplot}
+\end{figure}
+
+Another way to visualize the results obtained from the \code{computeDEGs()} function is to use the
+\code{Histogram()} method, showing in a plot the number of the genes differentially expressed (up-regulated or down-regulated) at each expression level.
+
+Optional input parameters of \code{Histogram()} are:
+\begin{itemize}
+\item  outputformat, a character string specifying if the plot is saved in jpeg (\code{jpeg}), postscript (\code{postscript}), pdf (\code{pdf}) format, or it is simply displayed on the screen(\code{on screen}). By default this value is \code{on screen}.
+\item  plottype, a label specifying whether the histogram should be just a brief "summary" of the data analysis, showing the number of genes up and down regulated in the first and second level (Figure \ref{HistogramSummary}), or it should be a "detailed" histogram presenting the distribution of all the possible classes of DEGs, according to their behaviour in the two expression levels (Figure \ref{HistogramDetailed}).
+
+\end{itemize}
+
+
+\begin{figure}[tbp]
+  \includegraphics[]{fig//HistogramSummary.png}
+  \caption{Summary histrogram of the identified  differentially expressed genes (DEGs). It shows the distribution of up-regulated (in black) and down-regulated (in gray) genes at the two expression levels, transcriptome and translatome in our example.}
+  \label{HistogramSummary}
+\end{figure}
+
+\begin{figure}[tbp]
+  \includegraphics[]{fig//HistogramDetailed.png}
+  \caption{Detailed histogram of the identified differentially expressed genes (DEGs). It shows the number of genes up or down regulated only at the first expression level ("up/-" or "down/-", in blue tones), only at the second expression level ("-/up" or "-/down", yellow tones), at both expression levels with the same trend ("up/up" or "down/down", in green tones), at both expression levels with opposite trends ("up/down" or "down/up", in red tones).}
+  \label{HistogramDetailed}
+\end{figure}
+
+\section{Quality control}
+
+The MA-plots show in logarithmic scale the relationship between the average log2 signal intensity (A) and the log2 fold change (M) for each gene.
+The general assumption of genome-wide profiles is that most of the genes don't show any change in their expression. Therefore the majority of the genes should be located around 0 on the y-axis of the MA-plot. If this is not the case and there isn't a biological justification, an alternative normalization method should be applied \cite{MA}. tRanslatome enables the generation of MA-plots within the \code{MAplot()} method, which can be applied to object of class \code{DEGs} (Figure \ref{MAplot}).
+
+Optional input parameters of \code{MAplot()} are:
+\begin{itemize}
+\item  outputformat, a character string specifying if the plot is saved in jpeg (\code{jpeg}), postscript (\code{postscript}), pdf (\code{pdf}) format, or it is simply displayed on the screen(\code{on screen}). By default this value is \code{on screen}.
+\item  track, a character vector of gene names that will be explicitly highlighted in the scatterplot, if they match any gene contained in the object of class \code{DEGs}. By default this vector is empty.
+\end{itemize}
+
+The upper panel in Figure \ref{MAplot} refers to the first expression level (transcriptome in our example), whereas the lower panel refers to the second expression level (translatome in our example). DEGs at each level are color labeled.
+
+\begin{figure}[tbp]
+  \includegraphics[]{fig//MAplot.png}
+  \caption{MA plots for the first expression level (upper panel) and the second expression level (lower panel).}
+  \label{MAplot}
+\end{figure}
+
+In tRanslatome there is also a method to visualize the relationship between the FC of the selected DEGs with respect to the standard deviation of their signals.
+The \code{SDplot()} method plots for each of the two expression levels the standard deviation of the genes against their logarithmic fold change.
+
+The set of input parameters is exactly like in \code{MAplot()}. The upper panel in Figure \ref{SDplot} refers to the first expression level (transcriptome in our example), whereas the lower panel refers to the second expression level (translatome in our example).
+
+\begin{figure}[tbp]
+  \includegraphics[]{fig//SDplot.png}
+  \caption{Standard deviation against log2 fold change of the genes. DEGs at the first and at the second expression level are labeled respectively in blue and yellow.}
+  \label{SDplot}
+\end{figure}
+
+
+Alternatively, the relationship between the log2 fold change and the coefficient of variation (CV) of each gene can be visualized with the \code{CVplot()} method (See Figure \ref{CVplot}).
+
+
+\begin{figure}[tbp]
+  \includegraphics[]{fig//CVplot.png}
+  \caption{Coefficient of variation against log2 fold change of the genes. DEGs at the first and at the second expression level are labeled respectively in blue and yellow.}
+  \label{CVplot}
+\end{figure}
+
+
+\section{GO Enrichment}
+
+The Gene Ontology (GO) project provides a standardized controlled vocabulary to describe gene product attributes in all organisms \cite{GO1}.
+GO consists of three hierarchically structured vocabularies (ontologies) that describe gene products in terms of their associated biological processes (BP), cellular components (CC) and molecular functions (MF). 
+One of the most frequent applications of the GO to the results of high-throughput experiments is the enrichment analysis - the identification of GO terms that are significantly over-represented in a given set of differentially expressed genes \cite{GO1} \cite{GO2}. 
+Enrichment analysis describes the functional characteristics of the given set of DEGs, suggesting the occurrence of possible mechanisms of regulation associated to the condition under examination \cite{GO2}.
+tRanslatome offers different methods to perform enrichment analysis at both expression levels by detecting the overrepresented GO terms in the lists of DEGs returned from the \code{getDEGs()} function.
+
+\code{GOEnrichment()} is a function in tRanslatome which identifies GO terms significantly enriched in the two lists of DEGs (corresponding to the two expression levels under analysis). 
+The enrichment analysis can be performed on the whole set of GO ontologies, or restricted to one single ontology (either molecular function, cellular component or biological process). Moreover, the enrichment analysis can be performed on different classes of DEGs: only up-regulated genes, only down-regulated genes or both independently from the direction of their changes. 
+
+The function \code{GOEnrichment()} has the following input parameters:
+\begin{itemize}
+\item{object}{an object of class \code{DEGs}}
+ \item{ontology}{a character string specifying the GO ontology of interest: \code{CC} for Cellular Component, \code{BP} for Biological Process, \code{MF} for Molecular Function or \code{all} for all the three ontologies. The default is set to \code{all}.}
+ \item{classOfDEGs}{a character string specifying the class of genes for which we want to detect enriched GO terms: \code{up} for considering only up-regulated genes, \code{down} for considering only down-regulated genes, \code{both} for considering all DEGs, independently from the direction of their changes. The default is set to \code{both}.}
+ \item{test.method}{a character string specifying the statistical method to calculate the enrichment. By default it is set to \code{classic} (enrichment is measured with the classic Fisher exact test), but it can also be set to \code{elim}, \code{weight}, \code{weight01} or \code{parentchild}. All these methods are implemented in the \code{topGO} Bioconductor package}
+ \item{test.threshold}{a numeric value specifying the significance threshold upon which the GO terms are considered significantly over-represented. By default it is se to \code{0.05}.}
+ \item{mult.cor}{a boolean variable specifying whether the significance threshold is applied to the multiple test corrected or to the original p-values obtained from the selected enrichment method. By default it is set to \code{TRUE}.}
+\end{itemize}
+
+The output of the function \code{GOEnrichment()} is an object of class \code{GOsets}, containing the results of the enrichment analysis. 
+
+The method \code{Radar()} can be applied to the object of class \code{GOsets} in order to display the top enriched GO terms for the first and second expression level in a radar plot display (Figure \ref{Radar}).
+
+The  \code{Radar()} method has the following mandatory input parameters:
+\begin{itemize}
+\item object, an object of class \code{GOsets}.
+\item ontology, a label selecting the ontology of interest (either \code{CC}, \code{BP} or \code{MF}).
+
+Optional input parameters are:
+
+  \item outputformat, a character string specifying if the plot is saved in jpeg (\code{jpeg}), postscript (\code{postscript}), pdf (\code{pdf}) format, or it is simply displayed on the screen(\code{on screen}). By default this value is \code{on screen}.
+  \item n.nodes.1stlevel, a numeric value specifying the number of top enriched GO terms, from the first level, that will be represented on the plot. By default the value is set to \code{5}.
+  \item n.nodes.2ndlevel, a numeric value specifying the number of top enriched GO terms, from the second level, that will be represented on the plot. By default the value is set to \code{5}.
+  \item mult.cor, a boolean variable specifying whether the displayed significance values are multiple test corrected or the original p-values obtained from the selected enrichment method. By default it is set to \code{TRUE}.
+\end{itemize}
+
+
+\begin{figure}[tbp]
+  \includegraphics[]{fig//Radar.png}
+  \caption{Top enriched GO terms are displayed in form of a radar plot. Enrichment p-values values for the first expression level are labeled in blue, whereas enrichment p-values for the second expression level are labeled in yellow.}
+  \label{Radar}
+\end{figure}
+
+The method \code{Heatmap()}, applied to an object of class \code{GOsets}, displays the top enriched GO terms for the first and second expression level in form of a heatmap (Figure \ref{Heatmap}).
+
+The \code{Heatmap()} method has the same input parameter of the  \code{Radar()} method.
+
+
+\begin{figure}[tbp]
+  \includegraphics[]{fig//Heatmap.png}
+  \caption{Heatmap of the top enriched GO terms for each expression level, transcriptome and translatome in our example. The color scale is based on the -log10 of the enrichment p-value.}
+  \label{Heatmap}
+\end{figure}
+
+\section{GO Comparison}
+
+The function \code{GOComparison()} takes as input an object of class \code{GOsets}, containing the results of a GO enrichment analysis applied to both expression levels, and returns as output an object of class \code{GOsims}, containing a variety of comparisons among the enriched GO terms. These comparisons include the calculation of semantic similarity scores between terms differentially enriched at the two levels, using the Wang method \cite{semsim}.
+
+This function  has only one input parameter:
+\begin{itemize}
+\item  object, an object of class \code{GOsets}.
+\end{itemize}
+
+The output is a an object of class \code{GOsims}, containing an identity comparison and a semantic similarity comparison between the GO terms enriched at the two expression levels under analysis. 
+
+The method \code{IdentityPlot()}, applied to an object of class \code{GOsims}, displays in a barplot, for each GO ontology, the number of GO terms showing enrichment in both expression levels or only in one expression level. (Figure \ref{IdentityPlot}).
+
+
+\begin{figure}[tbp]
+  \includegraphics[]{fig//IdentityPlot.png}
+  \caption{Barplot of the number of GO terms showing enrichment in both expression levels, transcriptome and translatome in our example, or only in one expression level.}
+  \label{IdentityPlot}
+\end{figure}
+
+
+The method \code{SimilarityPlot()}, applied to an object of class \code{GOsims}, displays in a barplot, for each GO ontology, the average semantic similarity value between GO terms showing enrichment in the first or in the second expression level. (Figure \ref{SimilarityPlot}).
+
+
+\begin{figure}[htbp]
+  \includegraphics[]{fig//SimilarityPlot.png}
+  \caption{Barplot of the average semantic similarity value between GO terms showing enrichment in the first or in the second expression level, transcriptome and translatome in our example. Semantic similarity values are calculated with the Wang method \cite{semsim}}.
+  \label{SimilarityPlot}
+\end{figure}
+
+
+\section{Regulatory Enrichment}
+
+RegulatoryEnrichment is a function which, given as input an object of class \code{DEGs}, identifies overrepresented post-transcriptional regulators (RNA-binding proteins, microRNA, etc) possibly controlling differentially expressed genes. The analysis is applied to a dataset of experimentally determined post-transcriptional interactions extracted from the AURA database(http://aura.science.unitn.it). However, the user can specify a custom dataset onto which the analysis can be performed (see arguments for details). Moreover, the function can identify enriched regulators for separate classes of genes of interest: only up-regulated genes, only down-regulated genes or both of them together. Moreover, the function can identify enriched regulators for separate classes of genes of interest: only up-regulated genes, only down-regulated genes or both of them together. The method works by exploiting two lists: one containing all genes regulated by each of the post-transcriptional regulators, and the other containing the number of regulated and non-regulated genes for each of these post-transcriptional regulators in the backgroung gene set (usually the whole genome). By means of these two lists it is possible to compute a Fisher enrichment p-value indicating wether a significant group of genes in the DEGs list is likely to be regulated by one or more of these post-transcriptional regulators. The output of the function is an object of class \code{EnrichedSets}, containing the results of the enrichment analysis. 
+
+The method \code{Radar()} and the method \code{Heatmap()} can be applied also to objects of class \code{EnrichedSets} in order to display the top enriched regulatory elements for the first and second expression level in a radar plot or in a heatmap display.
+
+
+
+\begin{thebibliography}{10}
+
+\bibitem{Parent}
+  Parent R, Kolippakkam D, Booth G, Beretta L.
+  Mammalian target of rapamycin activation impairs hepatocytic differentiation and targets genes moderating lipid homeostasis and hepatocellular growth.
+  {\em Cancer Res.}, 2007, 67(9):4337-45. 
+  
+\bibitem{Limma}
+  Smyth GK.
+  Linear models and empirical Bayes methods for assessing differential expression in microarray experiments.
+  {\em Stat Appl Genet Mol Biol.}, 2004, 3:Article3.
+  
+\bibitem{t-test}
+  Tian L, Greenberg SA, Kong SW, Altschuler J, Kohane IS, Park PJ.
+  Discovering statistically significant pathways in expression profiing studies.
+  {\em Proc Natl Acad Sci USA.}, 2005, 102(38):13544-9.
+ 
+\bibitem{RP}
+  Breitling R, Armengaud P, Amtmann A, Herzyk P.
+  Rank products: a simple, yet powerful, new method to detect differentially regulated genes in replicated microarray experiments
+  {\em FEBS Lett.}, 2004, 573(1-3):83-92.
+  
+\bibitem{TE}  
+  Courtes FC et al. (2013) 
+  Translatome analysis of CHO cells identify key growth genes. 
+  {\em Journal of Biotechnology}, 167, 215-24.
+
+\bibitem{SAM}
+  Tusher VG, Tibshirani R, Chu G.
+  Significance analysis of microarrays applied to the ionizing radiation response
+  {\em Proc Natl Acad Sci USA.}, 2001, 98(9):5116-21.
+  
+\bibitem{ANOTA}
+  Larsson O, Sonenberg N, Nadon R.
+  anota: Analysis of differential translation in genome-wide studies.
+  {\em Bioinformatics}, 2011, 27(10):1440-1.
+
+\bibitem{DESeq}
+  Anders S, Huber W.
+  Differential expression analysis for sequence count data.
+  {\em Genome Biology}, 2010, 11(10):R106.
+
+\bibitem{edgeR}
+  Robinson MD, McCarthy DJ, Smyth GK.
+  edgeR: a Bioconductor package for differential expression analysis of digital gene expression data.
+  {\em Bioinformatics}, 2010, 26(1):139-40.
+
+\bibitem{MA}
+  Dudoit S, Yang YH, Callow MJ, Speed TP.
+  Statistical methods for identifying differentially expressed genes in replicated cDNA microarray experiments.
+  {\em Stat. Sin.}, 2002, 12:1 111-139.
+  
+\bibitem{GO1}
+  Ashburner M, Ball CA, Blake JA, Botstein D, Butler H, Cherry JM, Davis AP, Dolinski K, Dwight SS, Eppig JT, Harris MA, Hill DP, Issel-Tarver L, Kasarskis A, Lewis S, Matese JC, Richardson JE, Ringwald M, Rubin GM, Sherlock G.
+  Gene ontology: tool for the unification of biology.
+  {\em Nat. Genet.}, 2000, 25(1):25-9.
+  
+\bibitem{GO2}
+  Khatri P, Draghici S.
+  Ontological analysis of gene expression data: current tools, limitations, and open problems.
+  {\em Bioinformatics}, 2005, 21(18):3587-95. 
+  
+\bibitem{topGO}
+  Alexa A, Rahnenfuhrer J, Lengauer T.
+  Improved scoring of functional groups from gene expression data by decorrelating go graph structure. 
+  {\em Bioinformatics}, 2006, 22(13):1600-7.
+  
+\bibitem{semsim}
+ Yu G, Li F, Qin Y, Bo X, Wu Y, Wang S.
+ GOSemSim: an R package for measuring semantic similarity among GO terms and gene products. 
+ {\em Bioinformatics}, 2010, 26(7):976-8
+  
+\end{thebibliography}
+
+\end{document}
+

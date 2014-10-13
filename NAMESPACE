@@ -1,0 +1,5 @@
+export(newTranslatomeDataset, computeDEGs, getExprMatrix, getConditionA, getConditionB, getConditionC, getConditionD, getDataType, getConditionLabels, getLevelLabels, getDEGs)
+export(Histogram, Scatterplot, MAplot, SDplot, CVplot, GOEnrichment, RegulatoryEnrichment, DEGs.table, getDEGsMethod, significance.threshold, FC.threshold, label.level.DEGs, label.condition)
+export(Radar, Heatmap, enriched.table, label.level.enriched)
+export(GOComparison)
+export(IdentityPlot, SimilarityPlot, identity.matrix, similarity.matrix, average.similarity.scores)
