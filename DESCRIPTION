@@ -1,33 +1,17 @@
 Package: tRanslatome
 Type: Package
 Title: Comparison between multiple levels of gene expression.
-Version: 1.5.0
-Date: 2013-11-28
+Version: 1.1.2
+Date: 2015-01-28
 Author: Toma Tebaldi, Erik Dassi, Galena Kostoska
-Maintainer: Toma Tebaldi <tebaldi@science.unitn.it>, Erik Dassi
-        <erik.dassi@unitn.it>
+Maintainer: Toma Tebaldi <tebaldi@science.unitn.it>, Erik Dassi <erik.dassi@unitn.it>
 Depends: R (>= 2.15.0), methods, limma, sigPathway, samr, anota, DESeq,
         edgeR, RankProd, topGO, org.Hs.eg.db, GOSemSim, Heatplus,
         gplots, plotrix
-Description: Detection of differentially expressed genes (DEGs) from
-        the comparison of two biological conditions (treated vs.
-        untreated, diseased vs. normal, mutant vs. wild-type) among
-        different levels of gene expression (transcriptome
-        ,translatome, proteome), using several statistical methods:
-        Rank Product, Translational Efficiency, t-test, SAM, Limma,
-        ANOTA, DESeq, edgeR. Possibility to plot the results with
-        scatterplots, histograms, MA plots, standard deviation (SD)
-        plots, coefficient of variation (CV) plots. Detection of
-        significantly enriched post-transcriptional regulatory factors
-        (RBPs, miRNAs, etc) and Gene Ontology terms in the lists of
-        DEGs previously identified for the two expression levels.
-        Comparison of GO terms enriched only in one of the levels or in
-        both. Calculation of the semantic similarity score between the
-        lists of enriched GO terms coming from the two expression
-        levels. Visual examination and comparison of the enriched terms
-        with heatmaps, radar plots and barplots.
-License: LGPL
+Description: Detection of differentially expressed genes (DEGs) from the comparison of two biological conditions (treated vs. untreated, diseased vs. normal, mutant vs. wild-type) among different levels of gene expression (transcriptome ,translatome, proteome), using several statistical methods:  Rank Product, Translational Efficiency, t-test, SAM, Limma, ANOTA, DESeq, edgeR. Possibility to plot the results with scatterplots, histograms, MA plots, standard deviation (SD) plots, coefficient of variation (CV) plots. Detection of significantly enriched post-transcriptional regulatory factors (RBPs, miRNAs, etc) and Gene Ontology terms in the lists of DEGs previously identified for the two expression levels. Comparison of GO terms enriched only in one of the levels or in both. Calculation of the semantic similarity score between the lists of enriched GO terms coming from the two expression levels. Visual examination and comparison of the enriched terms with heatmaps, radar plots and barplots. 
+License: MIT
 LazyLoad: yes
-biocViews: CellBiology, GeneRegulation, GeneExpression,
-        DifferentialExpression, Microarray, Sequencing, QualityControl,
-        GO, MultipleComparison
+biocViews: CellBiology, GeneRegulation, Regulation, GeneExpression,
+        DifferentialExpression, Microarray, HighThroughputSequencing,
+        QualityControl, GO, MultipleComparisons, Bioinformatics
+Packaged: 2015-01-29 13:48:55 UTC; toma
