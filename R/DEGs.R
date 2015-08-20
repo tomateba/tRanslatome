@@ -624,9 +624,9 @@ setMethod("RegulatoryEnrichment", "DEGs",
 	}
 	else {
 		enriched.1 <- computeGeneListEnrichment(genes.1stlevel,
-											label.level.DEGs[1], significance.threshold, mult.cor, regulated.identities=NULL, regulated.counts=NULL)
+											label.level.DEGs[1], significance.threshold, mult.cor, regulated.identities, regulated.counts)
 		enriched.2 <- computeGeneListEnrichment(genes.2ndlevel,
-											label.level.DEGs[2], significance.threshold, mult.cor, regulated.identities=NULL, regulated.counts=NULL)
+											label.level.DEGs[2], significance.threshold, mult.cor, regulated.identities, regulated.counts)
 		
 		return(new("EnrichedSets", enriched.table=rbind(enriched.1, enriched.2), 
 												 label.level.enriched=label.level.DEGs))	
