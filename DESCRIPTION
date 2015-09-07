@@ -1,10 +1,10 @@
 Package: tRanslatome
 Type: Package
 Title: Comparison between multiple levels of gene expression
-Version: 1.7.2
-Date: 2015-08-20
+Version: 1.7.4
+Date: 2015-09-04
 Author: Toma Tebaldi, Erik Dassi, Galena Kostoska
-Maintainer: Toma Tebaldi <tebaldi@science.unitn.it>, Erik Dassi <erik.dassi@unitn.it>
+Maintainer: Toma Tebaldi <t.tebaldi@unitn.it>, Erik Dassi <erik.dassi@unitn.it>
 Depends: R (>= 2.15.0), methods, limma, sigPathway, samr, anota, DESeq,
         edgeR, RankProd, topGO, org.Hs.eg.db, GOSemSim, Heatplus,
         gplots, plotrix, Biobase
